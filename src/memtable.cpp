@@ -1,5 +1,7 @@
 #include "memtable.h"
 
+const std::string TOMBSTONE = std::string("\0__LSM_TOMBSTONE__\0", 20);
+
 void Memtable::put(const std::string& key, const std::string& value) {
     table[key] = value;
 }

@@ -2,15 +2,13 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
-#include <filesystem>
+#include <dirent.h>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <queue>
 #include <stdexcept>
 #include <utility>
-
-namespace fs = std::filesystem;
 
 namespace {
 bool read_record(std::ifstream& in, std::string& key, std::string& value) {
@@ -52,8 +50,8 @@ Engine::Engine(const std::string& log_path) : wal(log_path), wal_path(log_path) 
     std::map<std::string, std::string> temp_map;
     wal.recover(temp_map);
 
-    for (const auto& [k, v] : temp_map) {
-        memtable.put(k, v);
+    for (const auto& entry : temp_map) {
+        memtable.put(entry.first, entry.second);
     }
     std::cout << "[Engine] Recovery complete. Loaded " << sstable_files.size()
               << " SSTable(s); Memtable has " << memtable.size() << " key(s)." << std::endl;
@@ -63,10 +61,12 @@ void Engine::load_existing_sstables() {
     bool has_master = false;
     std::vector<std::pair<size_t, std::string>> numbered_tables;
 
-    for (const auto& entry : fs::directory_iterator(fs::current_path())) {
-        if (!entry.is_regular_file()) continue;
-        std::string name = entry.path().filename().string();
+    DIR* dir = opendir(".");
+    if (!dir) return;
 
+    struct dirent* ent = nullptr;
+    while ((ent = readdir(dir)) != nullptr) {
+        std::string name(ent->d_name);
         if (name == "sstable_master.db") {
             has_master = true;
         } else if (name.rfind("sstable_", 0) == 0 && name.size() > 11 &&
@@ -83,18 +83,20 @@ void Engine::load_existing_sstables() {
             }
         }
     }
+    closedir(dir);
 
     std::sort(numbered_tables.begin(), numbered_tables.end(),
-              [](const auto& a, const auto& b) { return a.first < b.first; });
+              [](const std::pair<size_t, std::string>& a, const std::pair<size_t, std::string>& b) {
+                  return a.first < b.first;
+              });
 
     if (has_master) {
         sstable_files.push_back("sstable_master.db");
         sstables.push_back(std::make_unique<SSTable>("sstable_master.db"));
     }
-    for (const auto& [id, name] : numbered_tables) {
-        (void)id;
-        sstable_files.push_back(name);
-        sstables.push_back(std::make_unique<SSTable>(name));
+    for (const auto& item : numbered_tables) {
+        sstable_files.push_back(item.second);
+        sstables.push_back(std::make_unique<SSTable>(item.second));
     }
 }
 
@@ -238,6 +240,7 @@ void Engine::compact() {
     sstable_files.clear();
 
     std::string master_file = "sstable_master.db";
+    std::remove(master_file.c_str()); // Windows rename fails if destination exists
     if (std::rename(temp_master.c_str(), master_file.c_str()) != 0) {
         throw std::runtime_error("Failed to promote " + temp_master + " to " + master_file);
     }

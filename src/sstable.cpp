@@ -12,7 +12,9 @@ void SSTable::write_to_disk(const std::string& filename, const std::map<std::str
         throw std::runtime_error("Failed to create SSTable file: " + filename);
     }
 
-    for (const auto& [key, value] : memtable) {
+    for (const auto& entry : memtable) {
+        const std::string& key = entry.first;
+        const std::string& value = entry.second;
         uint32_t key_len = static_cast<uint32_t>(key.size());
         uint32_t val_len = static_cast<uint32_t>(value.size());
 

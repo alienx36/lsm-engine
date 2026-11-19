@@ -5,7 +5,7 @@
 #include <map>
 
 // Sentinel value representing a deleted key (tombstone)
-inline const std::string TOMBSTONE = std::string("\0__LSM_TOMBSTONE__\0", 20);
+extern const std::string TOMBSTONE;
 
 class Memtable {
 public:

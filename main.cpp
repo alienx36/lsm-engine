@@ -1,17 +1,24 @@
 #include "include/engine.h"
 #include <cassert>
-#include <filesystem>
+#include <cstdio>
+#include <dirent.h>
 #include <iostream>
+#include <string>
 
 int main() {
     try {
         // Clean previous run artifacts for a deterministic demo
-        for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::current_path())) {
-            std::string name = entry.path().filename().string();
-            if (name == "wal.log" || name == "sstable_master.db" ||
-                (name.rfind("sstable_", 0) == 0 && name.size() > 3 && name.substr(name.size() - 3) == ".db")) {
-                std::filesystem::remove(entry.path());
+        DIR* dir = opendir(".");
+        if (dir) {
+            struct dirent* ent = nullptr;
+            while ((ent = readdir(dir)) != nullptr) {
+                std::string name(ent->d_name);
+                if (name == "wal.log" || name == "sstable_master.db" ||
+                    (name.rfind("sstable_", 0) == 0 && name.size() > 3 && name.substr(name.size() - 3) == ".db")) {
+                    std::remove(name.c_str());
+                }
             }
+            closedir(dir);
         }
 
         std::cout << "--- Booting Production-Grade LSM Engine ---" << std::endl;
