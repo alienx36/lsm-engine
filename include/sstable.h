@@ -4,16 +4,20 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <ios>
 
 class SSTable {
 public:
+    // Index every Nth key to keep the in-memory index sparse
+    static constexpr size_t SPARSE_INDEX_INTERVAL = 2;
+
     // Creates an SSTable file from a sorted map (Memtable)
     static void write_to_disk(const std::string& filename, const std::map<std::string, std::string>& memtable);
 
     // Constructor to open an existing SSTable for reading
     SSTable(const std::string& filename);
 
-    // Searches for a key inside this specific disk file
+    // Searches for a key inside this specific disk file using O(log N) binary search
     std::string get(const std::string& key);
 
 private:
@@ -27,7 +31,7 @@ private:
 
     std::vector<IndexEntry> sparse_index;
 
-    // Helper to build the index when reading an existing file from disk
+    // Helper to build the sparse index when reading an existing file from disk
     void load_index();
 };
 

@@ -14,22 +14,25 @@ public:
     ~Engine() = default;
 
     void put(const std::string& key, const std::string& value);
+    void del(const std::string& key);
     std::string get(const std::string& key);
-    
-    // Scans, merges ALL uncompacted SSTables, and purges the WAL
+
+    // Scans, merges ALL uncompacted SSTables via K-way merge, and purges the WAL
     void compact();
 
 private:
     Memtable memtable; // Cleanly isolated RAM layer
     WAL wal;           // Durability layer
     std::string wal_path;
-    
-    // Dynamic tracking of all active SSTable files on disk
+
+    // Dynamic tracking of all active SSTable files on disk (oldest -> newest)
     std::vector<std::string> sstable_files;
     std::vector<std::unique_ptr<SSTable>> sstables;
-    
+    size_t next_sstable_id = 1;
+
     const size_t MAX_MEMTABLE_KEYS = 3; // Strict flush limit
-    
+
+    void load_existing_sstables();
     void flush_memtable();
 };
 

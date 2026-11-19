@@ -4,6 +4,10 @@ void Memtable::put(const std::string& key, const std::string& value) {
     table[key] = value;
 }
 
+void Memtable::del(const std::string& key) {
+    table[key] = TOMBSTONE;
+}
+
 std::string Memtable::get(const std::string& key) const {
     auto it = table.find(key);
     if (it != table.end()) {

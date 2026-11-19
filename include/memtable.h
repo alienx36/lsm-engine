@@ -4,6 +4,9 @@
 #include <string>
 #include <map>
 
+// Sentinel value representing a deleted key (tombstone)
+inline const std::string TOMBSTONE = std::string("\0__LSM_TOMBSTONE__\0", 20);
+
 class Memtable {
 public:
     Memtable() = default;
@@ -11,8 +14,9 @@ public:
 
     // Core Mutators & Accessors
     void put(const std::string& key, const std::string& value);
+    void del(const std::string& key);
     std::string get(const std::string& key) const;
-    
+
     // Management Helpers
     size_t size() const;
     void clear();
