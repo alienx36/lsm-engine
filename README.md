@@ -153,12 +153,12 @@ key_F -> val_1
 
 ### Complexity Characteristics
 
-| Operation                | Complexity                    |
-| ------------------------ | ----------------------------- |
-| SSTable Discovery        | O(N)                          |
-| Multi-Way Merge          | O(Total Records * log K)      |
-| Duplicate Resolution     | O(1) per record               |
-| Final SSTable Generation | O(Total Records)              |
+| Operation                | Complexity               |
+| ------------------------ | ------------------------ |
+| SSTable Discovery        | O(N)                     |
+| Multi-Way Merge          | O(Total Records * log K) |
+| Duplicate Resolution     | O(1) per record          |
+| Final SSTable Generation | O(Total Records)         |
 
 Where **N** is the number of files in the directory and **K** is the number of SSTables participating in the compaction cycle.
 
@@ -171,6 +171,27 @@ Where **N** is the number of files in the directory and **K** is the number of S
 | **WAL**      | Disk (`wal.log`) | Sequential data persistence and durability                  | Write: **O(1)**                     |
 | **Memtable** | RAM (`std::map`) | High-speed cache and lexicographical sorting                | Read/Write: **O(log N)**            |
 | **SSTable**  | Disk (`*.db`)    | Immutable sorted storage with sparse index + `seekg()` jump | Read: **O(log N)** via Sparse Index |
+
+---
+
+## 📈 Benchmark Results (`benchmark.cpp`)
+
+Measured locally on Windows (`g++ -std=c++17 -O2`, 300 mixed `put`/`update`/`del` operations across 100 unique keys with `MAX_MEMTABLE_KEYS = 3` producing 100 SSTables prior to compaction, followed by 1,000 point reads):
+
+| Metric | Measured Result |
+| :--- | :--- |
+| **Storage Before Compaction** | `18,518 bytes` (uncompacted SSTables + `wal.log`) |
+| **Storage After Compaction** | `2,070 bytes` (`sstable_master.db`, `wal.log` = `0 bytes`) |
+| **Disk Space Reclaimed** | **88.82%** |
+| **K-Way Compaction Latency** | **15.54 ms** (merging 100 SSTables) |
+| **Post-Compaction Point Reads** | **29.01 µs/read** (`~34,476 reads/sec` across 1,000 queries) |
+
+### Run the Benchmark
+
+```bash
+g++ -std=c++17 -O2 -I./include src/wal.cpp src/memtable.cpp src/sstable.cpp src/engine.cpp benchmark.cpp -o lsm_bench.exe
+./lsm_bench.exe
+```
 
 ---
 
